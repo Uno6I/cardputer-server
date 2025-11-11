@@ -1,56 +1,45 @@
+# kasa_server_any_ip.py
 import asyncio
-import os, time
+from kasa import IotPlug
+from aiohttp import web
 
-# Force a valid timezone
-os.environ['TZ'] = 'America/Los_Angeles'  # or UTC if you prefer
-time.tzset()
-
-# Patch tzlocal fallback (Python-Kasa uses tzlocal internally)
-import tzlocal
-tzlocal.get_localzone = lambda: tzlocal.tzfile('/usr/share/zoneinfo/America/Los_Angeles')
-
-# Now import kasa
-from kasa import SmartPlug
-
-SERVER_IP = "0.0.0.0"
-SERVER_PORT = 5000
-
-PLUGS = {}  # Cache SmartPlug objects
-
-async def toggle_plug(ip):
+async def toggle_plug(ip: str):
+    """Toggle the plug at the given IP."""
     try:
-        if ip not in PLUGS:
-            PLUGS[ip] = SmartPlug(ip)
-        plug = PLUGS[ip]
-        await plug.update()  # Must await
-        if plug.is_on:
-            await plug.turn_off()
-        else:
-            await plug.turn_on()
-        print(f"Toggled {ip}")
+        plug = IotPlug(ip)
+        await plug.update()  # fetch device info
+        await plug.toggle()   # toggle on/off
+        print(f"✅ Toggled {ip}")
+        return True
     except Exception as e:
-        print(f"Error toggling {ip}: {e}")
+        print(f"⚠️ Error toggling {ip}: {e}")
+        return False
 
-async def handle_client(reader, writer):
-    try:
-        data = await reader.readline()
-        plug_ip = data.decode().strip()
-        print(f"Received toggle request for {plug_ip}")
-        await toggle_plug(plug_ip)
-    except Exception as e:
-        print(f"Error handling client: {e}")
-    finally:
-        writer.close()
-        await writer.wait_closed()
+async def handle_toggle(request):
+    """HTTP handler to toggle a plug."""
+    ip = request.query.get("ip")
+    if not ip:
+        return web.json_response({"status": "error", "message": "No IP provided"}, status=400)
 
-async def main():
-    server = await asyncio.start_server(handle_client, SERVER_IP, SERVER_PORT)
-    print(f"Server listening on {SERVER_IP}:{SERVER_PORT}")
-    async with server:
-        await server.serve_forever()
+    print(f"🌀 Received toggle request for {ip}")
+    success = await toggle_plug(ip)
+
+    if success:
+        feedback = f"Plug {ip} toggled!"
+        print(feedback)
+        return web.json_response({"status": "success", "ip": ip, "message": feedback})
+    else:
+        feedback = f"Failed to toggle {ip}"
+        print(feedback)
+        return web.json_response({"status": "error", "ip": ip, "message": feedback}, status=500)
+
+async def init_app():
+    app = web.Application()
+    app.router.add_get("/toggle", handle_toggle)
+    return app
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
-
-
+    loop = asyncio.get_event_loop()
+    app = loop.run_until_complete(init_app())
+    print("Server running on http://0.0.0.0:5000")
+    web.run_app(app, host="0.0.0.0", port=5000)

@@ -1,14 +1,17 @@
-# kasa_server_any_ip.py
+# kasa_server_smartplug.py
 import asyncio
-from kasa import IotPlug
+from kasa import SmartPlug
 from aiohttp import web
 
 async def toggle_plug(ip: str):
-    """Toggle the plug at the given IP."""
+    """Toggle the plug at the given IP using SmartPlug."""
     try:
-        plug = IotPlug(ip)
-        await plug.update()  # fetch device info
-        await plug.toggle()   # toggle on/off
+        plug = SmartPlug(ip)
+        await plug.update()  # fetch current state
+        if plug.is_on:
+            await plug.turn_off()
+        else:
+            await plug.turn_on()
         print(f"✅ Toggled {ip}")
         return True
     except Exception as e:

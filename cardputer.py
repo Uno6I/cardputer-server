@@ -1,4 +1,8 @@
 import asyncio
+import os
+os.environ['TZ'] = 'America/Los_Angeles'  # replace with your timezone
+import time
+time.tzset()  # Apply the timezone
 from kasa import SmartPlug
 
 SERVER_IP = "0.0.0.0"
@@ -40,3 +44,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+

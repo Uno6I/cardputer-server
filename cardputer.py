@@ -1,8 +1,15 @@
 import asyncio
 import os, time
-os.environ['TZ'] = 'UTC'
+
+# Force a valid timezone
+os.environ['TZ'] = 'America/Los_Angeles'  # or UTC if you prefer
 time.tzset()
 
+# Patch tzlocal fallback (Python-Kasa uses tzlocal internally)
+import tzlocal
+tzlocal.get_localzone = lambda: tzlocal.tzfile('/usr/share/zoneinfo/America/Los_Angeles')
+
+# Now import kasa
 from kasa import SmartPlug
 
 SERVER_IP = "0.0.0.0"
@@ -44,5 +51,6 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
 

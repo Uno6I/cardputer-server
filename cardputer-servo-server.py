@@ -5,7 +5,7 @@ from gpiozero import AngularServo
 from time import sleep
 
 # --- SERVO SETUP ---
-servo = AngularServo(12, min_angle=0, max_angle=180)  # change pin if needed
+servo = AngularServo(13, min_angle=0, max_angle=180)  # change pin if needed
 servo_state = False
 
 
